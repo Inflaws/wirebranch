@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WireBranch — Визуальный редактор модов для Garry's Mod</title>
+    <style>
+        /* ===== RESET & BASE ===== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #7c3aed;
+            --primary-light: #a78bfa;
+            --accent: #06b6d4;
+            --accent-light: #67e8f9;
+            --bg-dark: #0a0a0f;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --glow-purple: rgba(124, 58, 237, 0.4);
+            --glow-cyan: rgba(6, 182, 212, 0.4);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ===== CANVAS BACKGROUND ===== */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== NAVBAR ===== */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(20px);
+            background: rgba(10, 10, 15, 0.7);
+            border-bottom: 1px solid rgba(124, 58, 237, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .navbar.scrolled {
+            padding: 0.6rem 2rem;
+            background: rgba(10, 10, 15, 0.95);
+            box-shadow: 0 4px 30px rgba(124, 58, 237, 0.15);
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            text-decoration: none;
+            color: var(--text);
+            font-weight: 700;
+            font-size: 1.3rem;
+        }
+
+        .nav-logo svg {
+            width: 36px;
+            height: 36px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s ease;
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            padding: 0.5rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--glow-purple);
+        }
+
+        /* ===== HERO SECTION ===== */
+        .hero {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8rem 2rem 4rem;
+        }
+
+        .hero-content {
+            max-width: 900px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1.2rem;
+            background: rgba(124, 58, 237, 0.15);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 50px;
+            font-size: 0.85rem;
+            color: var(--primary-light);
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.8s ease forwards;
+            opacity: 0;
+        }
+
+        .hero-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.5); }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 0.8s ease 0.2s forwards;
+            opacity: 0;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #a78bfa, #06b6d4, #a78bfa);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 0% center; }
+            50% { background-position: 200% center; }
+            100% { background-position: 0% center; }
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 2.5rem;
+            animation: fadeInUp 0.8s ease 0.4s forwards;
+            opacity: 0;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease 0.6s forwards;
+            opacity: 0;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2.5rem;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #6d28d9);
+            color: white;
+            box-shadow: 0 4px 20px var(--glow-purple);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 40px var(--glow-purple);
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+		
+		.in-dev {
+			background: rgba(255, 255, 255, 0.03) !important;
+			color: #64748b !important;
+			box-shadow: none !important;
+			cursor: not-allowed !important;
+			pointer-events: none !important;
+			border: 1px dashed rgba(255, 255, 255, 0.12) !important;
+			filter: grayscale(0.4) opacity(0.65);
+		}
+		.in-dev::before, .in-dev:hover {
+		transform: none !important;
+		background: transparent !important;
+		box-shadow: none !important;
+		}
+/* Иконка "в разработке" */
+		.in-dev::after {
+		content: '🔒';
+		margin-left: 8px;
+		font-size: 0.85em;
+		filter: none;
+		opacity: 0.8;
+}
+
+        .btn-secondary:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(124, 58, 237, 0.3);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-visual {
+            margin-top: 4rem;
+            position: relative;
+            animation: fadeInUp 1s ease 0.8s forwards;
+            opacity: 0;
+        }
+
+        .hero-mockup {
+            width: 100%;
+            max-width: 800px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 80px var(--glow-purple);
+        }
+
+        .mockup-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .mockup-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .mockup-dot:nth-child(1) { background: #ef4444; }
+        .mockup-dot:nth-child(2) { background: #eab308; }
+        .mockup-dot:nth-child(3) { background: #22c55e; }
+
+        .mockup-body {
+            padding: 2rem;
+            min-height: 300px;
+            display: grid;
+            grid-template-columns: 200px 1fr 200px;
+            gap: 1rem;
+        }
+
+        .mockup-panel {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .mockup-panel h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 0.8rem;
+        }
+
+        .mockup-node {
+            padding: 0.6rem 0.8rem;
+            background: rgba(124, 58, 237, 0.15);
+            border: 1px solid rgba(124, 58, 237, 0.25);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+            cursor: default;
+            transition: all 0.3s ease;
+        }
+
+        .mockup-node:hover {
+            background: rgba(124, 58, 237, 0.25);
+            transform: translateX(4px);
+        }
+
+        .mockup-node.cyan {
+            background: rgba(6, 182, 212, 0.15);
+            border-color: rgba(6, 182, 212, 0.25);
+        }
+
+        .mockup-node.green {
+            background: rgba(34, 197, 94, 0.15);
+            border-color: rgba(34, 197, 94, 0.25);
+        }
+
+        .mockup-canvas-area {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            border: 1px dashed rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mockup-canvas-area::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+
+        .floating-node {
+            position: absolute;
+            padding: 0.8rem 1.2rem;
+            background: rgba(124, 58, 237, 0.2);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            animation: float 6s ease-in-out infinite;
+            backdrop-filter: blur(10px);
+        }
+
+        .floating-node:nth-child(1) { top: 20%; left: 15%; animation-delay: 0s; }
+        .floating-node:nth-child(2) { top: 50%; left: 55%; animation-delay: 2s; }
+        .floating-node:nth-child(3) { top: 30%; right: 15%; animation-delay: 4s; }
+
+        .floating-node::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            top: 50%;
+            right: -14px;
+            box-shadow: 0 0 10px var(--glow-cyan);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-10px) rotate(1deg); }
+            75% { transform: translateY(10px) rotate(-1deg); }
+        }
+
+        /* ===== SECTION COMMON ===== */
+        section {
+            position: relative;
+            z-index: 1;
+            padding: 6rem 2rem;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-label {
+            display: inline-block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .section-header h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .section-header p {
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+            font-size: 1.1rem;
+        }
+
+        /* ===== FEATURES ===== */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .feature-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), var(--accent), transparent);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(124, 58, 237, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 40px var(--glow-purple);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            position: relative;
+        }
+
+        .feature-icon.purple {
+            background: rgba(124, 58, 237, 0.15);
+            color: var(--primary-light);
+            box-shadow: 0 0 20px rgba(124, 58, 237, 0.1);
+        }
+
+        .feature-icon.cyan {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent-light);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+        }
+
+        .feature-icon.green {
+            background: rgba(34, 197, 94, 0.15);
+            color: #4ade80;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.1);
+        }
+
+        .feature-icon.orange {
+            background: rgba(249, 115, 22, 0.15);
+            color: #fb923c;
+            box-shadow: 0 0 20px rgba(249, 115, 22, 0.1);
+        }
+
+        .feature-icon.pink {
+            background: rgba(236, 72, 153, 0.15);
+            color: #f472b6;
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.1);
+        }
+
+        .feature-icon.yellow {
+            background: rgba(234, 179, 8, 0.15);
+            color: #facc15;
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.1);
+        }
+
+        .feature-card h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        /* ===== HOW IT WORKS ===== */
+        .steps-container {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .steps-line {
+            position: absolute;
+            left: 32px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--primary), var(--accent), transparent);
+        }
+
+        .step {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            align-items: flex-start;
+            opacity: 0;
+            transform: translateX(-30px);
+            transition: all 0.6s ease;
+        }
+
+        .step.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .step-number {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            flex-shrink: 0;
+            box-shadow: 0 0 30px var(--glow-purple);
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-content {
+            padding-top: 0.5rem;
+        }
+
+        .step-content h3 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-content p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        /* ===== STATS ===== */
+        .stats-section {
+            background: linear-gradient(180deg, transparent, rgba(124, 58, 237, 0.05), transparent);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .stat-item {
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.5s ease;
+        }
+
+        .stat-item.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .stat-number {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-light), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        /* ===== SHOWCASE ===== */
+        .showcase-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .showcase-card {
+            border-radius: 16px;
+            overflow: hidden;
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.4s ease;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .showcase-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .showcase-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            border-color: rgba(124, 58, 237, 0.2);
+        }
+
+        .showcase-image {
+            height: 200px;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(6, 182, 212, 0.2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .showcase-image::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%);
+            animation: shine 4s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .showcase-info {
+            padding: 1.5rem;
+        }
+
+        .showcase-info h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .showcase-info p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .showcase-tags {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 0.25rem 0.75rem;
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid rgba(124, 58, 237, 0.2);
+            border-radius: 50px;
+            font-size: 0.75rem;
+            color: var(--primary-light);
+        }
+
+        /* ===== CTA SECTION ===== */
+        .cta-section {
+            text-align: center;
+            padding: 8rem 2rem;
+        }
+
+        .cta-box {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 4rem 3rem;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(6, 182, 212, 0.05));
+            border: 1px solid rgba(124, 58, 237, 0.15);
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-box::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 60%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .cta-box > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-box h2 {
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .cta-box p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            position: relative;
+            z-index: 1;
+            padding: 3rem 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .footer p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 1.5rem;
+            list-style: none;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-light);
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== GLOW ORB ===== */
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glow-orb-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--glow-purple);
+            top: 10%;
+            left: -10%;
+            animation: orb-float 8s ease-in-out infinite;
+        }
+
+        .glow-orb-2 {
+            width: 300px;
+            height: 300px;
+            background: var(--glow-cyan);
+            top: 60%;
+            right: -5%;
+            animation: orb-float 10s ease-in-out infinite reverse;
+        }
+
+        .glow-orb-3 {
+            width: 250px;
+            height: 250px;
+            background: rgba(236, 72, 153, 0.2);
+            bottom: 10%;
+            left: 30%;
+            animation: orb-float 12s ease-in-out infinite;
+        }
+
+        @keyframes orb-float {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(30px, -30px); }
+            66% { transform: translate(-20px, 20px); }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+
+            .mockup-body {
+                grid-template-columns: 1fr;
+            }
+
+            .mockup-panel { display: none; }
+
+            .mockup-canvas-area {
+                min-height: 200px;
+            }
+
+            .step {
+                gap: 1rem;
+            }
+
+            .step-number {
+                width: 48px;
+                height: 48px;
+                font-size: 1.1rem;
+            }
+
+            .steps-line {
+                left: 24px;
+            }
+
+            .cta-box {
+                padding: 2.5rem 1.5rem;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(124, 58, 237, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(124, 58, 237, 0.5);
+        }
+
+        /* ===== MOUSE GLOW ===== */
+        .mouse-glow {
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+            transform: translate(-50%, -50%);
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Mouse Glow -->
+    <div class="mouse-glow" id="mouseGlow"></div>
+
+    <!-- Particles Canvas -->
+    <canvas id="particles-canvas"></canvas>
+
+    <!-- Glow Orbs -->
+    <div class="glow-orb glow-orb-1"></div>
+    <div class="glow-orb glow-orb-2"></div>
+    <div class="glow-orb glow-orb-3"></div>
+
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <a href="#" class="nav-logo">
+            <svg viewBox="0 0 36 36" fill="none">
+                <rect x="2" y="2" width="32" height="32" rx="8" fill="url(#logo-grad)" />
+                <path d="M10 18L16 12L22 18L16 24Z" fill="white" opacity="0.9"/>
+                <path d="M16 18L22 12L28 18L22 24Z" fill="white" opacity="0.5"/>
+                <defs>
+                    <linearGradient id="logo-grad" x1="2" y1="2" x2="34" y2="34">
+                        <stop stop-color="#7c3aed"/>
+                        <stop offset="1" stop-color="#06b6d4"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            WireBranch
+        </a>
+        <ul class="nav-links">
+            <li><a href="#features">Возможности</a></li>
+            <li><a href="#how-it-works">Как работает</a></li>
+            <li><a href="#showcase">Примеры</a></li>
+            <span class="nav-cta in-dev">В разработке</span>
+        </ul>
+        <a href="#download" class="nav-cta">Скачать бесплатно</a>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                Бесплатно и с открытым исходным кодом
+            </div>
+            <h1>
+                Создавай моды для<br>
+                <span class="gradient-text">Garry's Mod</span> визуально
+            </h1>
+            <p>
+                Мощный визуальный редактор на основе Blueprints. Никакого кода — только логика, ноды и твоя фантазия.
+            </p>
+            <div class="hero-buttons">
+                <span class="btn btn-primary in-dev">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+    В разработке
+</span>
+                <a href="#features" class="btn btn-secondary">
+                    Узнать больше →
+                </a>
+            </div>
+
+            <div class="hero-visual">
+                <div class="hero-mockup">
+                    <div class="mockup-bar">
+                        <div class="mockup-dot"></div>
+                        <div class="mockup-dot"></div>
+                        <div class="mockup-dot"></div>
+                    </div>
+                    <div class="mockup-body">
+                        <div class="mockup-panel">
+                            <h4>📦 Ноды</h4>
+                            <div class="mockup-node">🎯 Event Begin</div>
+                            <div class="mockup-node cyan">⚡ Spawn Entity</div>
+                            <div class="mockup-node green">✅ Set Position</div>
+                            <div class="mockup-node">🔧 Get Player</div>
+                            <div class="mockup-node cyan">📐 Calculate</div>
+                        </div>
+                        <div class="mockup-canvas-area">
+                            <div class="floating-node">🎯 OnEntitySpawn</div>
+                            <div class="floating-node">⚡ CreateNPC</div>
+                            <div class="floating-node">✅ SetHP(100)</div>
+                        </div>
+                        <div class="mockup-panel">
+                            <h4>⚙️ Свойства</h4>
+                            <div class="mockup-node">📝 Name: NPC_01</div>
+                            <div class="mockup-node cyan">❤️ Health: 100</div>
+                            <div class="mockup-node green">🏃 Speed: 200</div>
+                            <div class="mockup-node">🎨 Color: Red</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features">
+        <div class="section-header">
+            <span class="section-label">Возможности</span>
+            <h2>Всё, что нужно для <span class="gradient-text">создания модов</span></h2>
+            <p>Интуитивный интерфейс, мощная логика и полная совместимость с Garry's Mod</p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon purple">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                </div>
+                <h3>Визуальные Blueprints</h3>
+                <p>Создавай логику модов перетаскиванием нод. Никакого программирования — только визуальная схема.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon cyan">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                </div>
+                <h3>500+ готовых нод</h3>
+                <p>Огромная библиотека нод для работы с сущностями, физикой, UI, звуком, сетью и многим другим.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon green">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h3>Безопасный экспорт</h3>
+                <p>Автоматическая генерация чистого Lua-кода с валидацией и проверкой ошибок перед экспортом.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon orange">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <h3>Превью в реальном времени</h3>
+                <p>Встроенный предпросмотр позволяет видеть результат без запуска Garry's Mod.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon pink">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <h3>Совместная работа</h3>
+                <p>Делись проектами с друзьями, импортируй чужие blueprint-схемы и создавай вместе.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon yellow">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                </div>
+                <h3>Кастомные ноды</h3>
+                <p>Создавай собственные ноды для уникальной логики. Расширяй функционал под свои нужды.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works">
+        <div class="section-header">
+            <span class="section-label">Как это работает</span>
+            <h2>Три шага до <span class="gradient-text">готового мода</span></h2>
+            <p>От идеи до рабочего мода за считанные минуты</p>
+        </div>
+
+        <div class="steps-container">
+            <div class="steps-line"></div>
+
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Создай Blueprint</h3>
+                    <p>Начни новый проект и перетаскивай ноды из библиотеки на рабочий холст. Выбирай события, действия и условия для построения логики твоего мода.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Настрой параметры</h3>
+                    <p>Каждая нода имеет настраиваемые параметры. Задай значения свойств, подключи переменные и настрой связи между нодами.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Экспортируй и играй</h3>
+                    <p>Нажми «Экспорт» — утилита сгенерирует готовый Lua-код и упакует его в структуру аддона для Garry's Mod. Просто помести в папку addons!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats-section">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number" data-target="500">0</div>
+                <div class="stat-label">Готовых нод</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" data-target="50">0</div>
+                <div class="stat-label">Шаблонов модов</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" data-target="10">0</div>
+                <div class="stat-label">Тысяч пользователей</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" data-target="100">0</div>
+                <div class="stat-label">% бесплатно</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Showcase -->
+    <section id="showcase">
+        <div class="section-header">
+            <span class="section-label">Примеры</span>
+            <h2>Что можно <span class="gradient-text">создать</span></h2>
+            <p>Вдохновляйся проектами сообщества или создай что-то уникальное</p>
+        </div>
+
+        <div class="showcase-grid">
+            <div class="showcase-card">
+                <div class="showcase-image">🤖</div>
+                <div class="showcase-info">
+                    <h3>Умный NPC с ИИ</h3>
+                    <p>NPC, который патрулирует территорию, реагирует на игрока и использует укрытия.</p>
+                    <div class="showcase-tags">
+                        <span class="tag">NPC</span>
+                        <span class="tag">ИИ</span>
+                        <span class="tag">Pathfinding</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="showcase-card">
+                <div class="showcase-image">🔫</div>
+                <div class="showcase-info">
+                    <h3>Кастомное оружие</h3>
+                    <p>Оружие с уникальной механикой стрельбы, эффектами частиц и системой прокачки.</p>
+                    <div class="showcase-tags">
+                        <span class="tag">SWEP</span>
+                        <span class="tag">Частицы</span>
+                        <span class="tag">RPG</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="showcase-card">
+                <div class="showcase-image">🏗️</div>
+                <div class="showcase-info">
+                    <h3>Система строительства</h3>
+                    <p>Продвинутая система строительства с сеткой, сохранениями и командным режимом.</p>
+                    <div class="showcase-tags">
+                        <span class="tag">Building</span>
+                        <span class="tag">Save/Load</span>
+                        <span class="tag">Мультиплеер</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="download">
+        <div class="cta-box">
+            <h2>Готов создать свой <span class="gradient-text">первый мод</span>?</h2>
+            <p>Скачай утилиту бесплатно и начни создавать моды для Garry's Mod уже сегодня</p>
+            <div class="cta-buttons">
+                <span class="btn btn-primary in-dev" id="downloadBtn">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    В разработке
+</span>
+                <a href="#" class="btn btn-secondary">
+                    📖 Документация
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>© 2025 WireBranch Team. Создано с 💜 для сообщества Garry's Mod.</p>
+            <ul class="footer-links">
+                <li><a href="#">GitHub</a></li>
+                <li><a href="#">Discord</a></li>
+                <li><a href="#">YouTube</a></li>
+            </ul>
+        </div>
+    </footer>
+
+    <script>
+        // ===== PARTICLES =====
+        const canvas = document.getElementById('particles-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let mouse = { x: 0, y: 0 };
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.1;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                // Mouse interaction
+                const dx = mouse.x - this.x;
+                const dy = mouse.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 150) {
+                    this.x -= dx * 0.01;
+                    this.y -= dy * 0.01;
+                    this.opacity = Math.min(0.8, this.opacity + 0.02);
+                }
+
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(167, 139, 250, ${this.opacity})`;
+                ctx.fill();
+            }
+        }
+
+        for (let i = 0; i < 80; i++) {
+            particles.push(new Particle());
+        }
+
+        function connectParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < 120) {
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = `rgba(124, 58, 237, ${0.08 * (1 - dist / 120)})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            connectParticles();
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // ===== MOUSE GLOW =====
+        const mouseGlow = document.getElementById('mouseGlow');
+        document.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            mouseGlow.style.left = e.clientX + 'px';
+            mouseGlow.style.top = e.clientY + 'px';
+        });
+
+        // ===== NAVBAR SCROLL =====
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 50);
+        });
+
+        // ===== SCROLL ANIMATIONS =====
+        const observerOptions = {
+            threshold: 0.15,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    // Stagger animation
+                    const delay = entry.target.dataset.delay || 0;
+                    setTimeout(() => {
+                        entry.target.classList.add('visible');
+                    }, delay);
+                }
+            });
+        }, observerOptions);
+
+        // Feature cards
+        document.querySelectorAll('.feature-card').forEach((card, i) => {
+            card.dataset.delay = i * 100;
+            observer.observe(card);
+        });
+
+        // Steps
+        document.querySelectorAll('.step').forEach((step, i) => {
+            step.dataset.delay = i * 200;
+            observer.observe(step);
+        });
+
+        // Stats
+        document.querySelectorAll('.stat-item').forEach((stat, i) => {
+            stat.dataset.delay = i * 150;
+            observer.observe(stat);
+        });
+
+        // Showcase cards
+        document.querySelectorAll('.showcase-card').forEach((card, i) => {
+            card.dataset.delay = i * 150;
+            observer.observe(card);
+        });
+
+        // ===== COUNTER ANIMATION =====
+        const counterObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const el = entry.target;
+                    const target = parseInt(el.dataset.target);
+                    let current = 0;
+                    const increment = target / 60;
+                    const timer = setInterval(() => {
+                        current += increment;
+                        if (current >= target) {
+                            current = target;
+                            clearInterval(timer);
+                        }
+                        el.textContent = Math.floor(current) + (target === 100 ? '%' : '+');
+                    }, 25);
+                    counterObserver.unobserve(el);
+                }
+            });
+        }, { threshold: 0.5 });
+
+        document.querySelectorAll('.stat-number').forEach(el => {
+            counterObserver.observe(el);
+        });
+
+        // ===== SMOOTH SCROLL FOR NAV LINKS =====
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // ===== DOWNLOAD BUTTON EFFECT =====
+        const downloadBtn = document.getElementById('downloadBtn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                // Здесь вставь свою ссылку на утилиту
+                // window.location.href = 'https://your-download-link.com';
+                
+                // Временная анимация
+                this.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Ссылка будет добавлена!
+                `;
+                this.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                this.style.boxShadow = '0 4px 20px rgba(34, 197, 94, 0.4)';
+                
+                setTimeout(() => {
+                    this.innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Скачать для Windows
+                    `;
+                    this.style.background = '';
+                    this.style.boxShadow = '';
+                }, 2500);
+            });
+        }
+
+        // ===== TILT EFFECT ON CARDS =====
+        document.querySelectorAll('.feature-card, .showcase-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const rotateX = (y - centerY) / 20;
+                const rotateY = (centerX - x) / 20;
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px)`;
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = '';
+            });
+        });
+    </script>
+</body>
+</html>
