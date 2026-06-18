@@ -992,7 +992,10 @@
             transform: translate(-50%, -50%);
             transition: opacity 0.3s ease;
         }
-    </style>
+    
+.lang-switcher{display:flex;gap:6px;margin-left:12px}
+.lang-switcher button{background:none;border:1px solid #666;color:#fff;padding:4px 8px;border-radius:6px;cursor:pointer}
+</style>
 </head>
 <body>
 
@@ -1029,7 +1032,7 @@
             <li><a href="#showcase">Примеры</a></li>
             <span class="nav-cta in-dev">В разработке</span>
         </ul>
-        <a href="#download" class="nav-cta">Скачать бесплатно</a>
+        <div class="lang-switcher"><button onclick="setLanguage('ru')">RU</button><button onclick="setLanguage('en')">Смотря какой fabric</button></div><a href="#download" class="nav-cta" id="dlBtnText">Скачать бесплатно</a>
     </nav>
 
     <!-- Hero Section -->
@@ -1505,5 +1508,93 @@
             });
         });
     </script>
+
+<script>
+const tr={
+ru:{
+title:"WireBranch — Визуальный редактор модов для Garry's Mod",
+download:"Скачать бесплатно",
+nav1:"Возможности",nav2:"Как работает",nav3:"Примеры",indev:"В разработке"
+},
+en:{
+title:"WireBranch — Visual Mod Editor for Garry's Mod",
+download:"Download Free",
+nav1:"Features",nav2:"How it Works",nav3:"Examples",indev:"In Development"
+}
+};
+
+function replaceText(node, map){
+ const walker=document.createTreeWalker(node,NodeFilter.SHOW_TEXT);
+ let n;
+ while(n=walker.nextNode()){
+   for(const [ru,en] of map){
+      if(n.nodeValue.includes(ru)){
+        n.nodeValue=n.nodeValue.replaceAll(ru,en);
+      }
+   }
+ }
+}
+
+const MAP=[
+["Возможности","Features"],
+["Как работает","How it Works"],
+["Примеры","Examples"],
+["В разработке","In Development"],
+["Скачать бесплатно","Download Free"],
+["Бесплатно и с открытым исходным кодом","Free and Open Source"],
+["Создавай моды для","Create Mods for"],
+["Мощный визуальный редактор на основе Blueprints. Никакого кода — только логика, ноды и твоя фантазия.","A powerful Blueprint visual editor. No code — only logic, nodes and imagination."],
+["Узнать больше →","Learn More →"],
+["Ноды","Nodes"],
+["Свойства","Properties"],
+["Всё, что нужно для","Everything needed for"],
+["создания модов","mod creation"],
+["Интуитивный интерфейс, мощная логика и полная совместимость с Garry's Mod","Intuitive interface, powerful logic and full compatibility with Garry's Mod"],
+["Визуальные Blueprints","Visual Blueprints"],
+["Создавай логику модов перетаскиванием нод. Никакого программирования — только визуальная схема.","Create mod logic by dragging nodes. No programming required."],
+["500+ готовых нод","500+ Ready Nodes"],
+["Безопасный экспорт","Safe Export"],
+["Превью в реальном времени","Real-time Preview"],
+["Совместная работа","Collaboration"],
+["Кастомные ноды","Custom Nodes"],
+["Как это работает","How It Works"],
+["Три шага до","Three steps to a"],
+["готового мода","finished mod"],
+["От идеи до рабочего мода за считанные минуты","From idea to a working mod in minutes"],
+["Создай Blueprint","Create Blueprint"],
+["Настрой параметры","Configure Parameters"],
+["Экспортируй и играй","Export and Play"],
+["Готовых нод","Ready Nodes"],
+["Шаблонов модов","Mod Templates"],
+["Что можно","What you can"],
+["создать","create"],
+["Умный NPC с ИИ","Smart AI NPC"],
+["Кастомное оружие","Custom Weapon"],
+["Система строительства","Building System"],
+["Готов создать свой","Ready to create your"],
+["первый мод","first mod"],
+["Документация","Documentation"],
+["Создано с 💜 для сообщества Garry's Mod.","Made with 💜 for the Garry's Mod community."],
+["Частицы","Particles"],
+["Мультиплеер","Multiplayer"],
+["ИИ","AI"]
+];
+
+function setLanguage(lang){
+ localStorage.setItem("wirebranch_lang",lang);
+ if(lang==="en"){
+   replaceText(document.body, MAP);
+   document.title=tr.en.title;
+ }
+ location.reload();
+}
+window.addEventListener('DOMContentLoaded',()=>{
+ if(localStorage.getItem("wirebranch_lang")==="en"){
+   replaceText(document.body, MAP);
+   document.title=tr.en.title;
+ }
+});
+</script>
 </body>
+
 </html>
