@@ -1,0 +1,39 @@
+@echo off
+title WireBranch Installer
+echo.
+echo  ==========================================
+echo   WireBranch Suite — Windows Installer
+echo  ==========================================
+echo.
+
+:: Проверка наличия Python
+where python >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Python не найден в PATH.
+    echo Скачайте Python 3.10+ с https://www.python.org/downloads/
+    echo Убедитесь, что отмечена опция "Add Python to PATH"
+    pause
+    exit /b 1
+)
+
+echo [OK] Python найден:
+python --version
+echo.
+
+:: Быстрая установка customtkinter, если его нет (для GUI инсталлятора)
+echo [*] Проверка customtkinter...
+python -c "import customtkinter" 2>nul
+if %errorlevel% neq 0 (
+    echo [*] Устанавливаю customtkinter...
+    python -m pip install customtkinter --quiet
+)
+
+echo [*] Запуск графического инсталлятора...
+echo.
+python "%~dp0install_wirebranch.py"
+
+if %errorlevel% neq 0 (
+    echo.
+    echo [ERROR] Инсталлятор завершился с ошибкой (код %errorlevel%).
+    pause
+)
